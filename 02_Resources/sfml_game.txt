@@ -1,0 +1,16 @@
+
+cd /Users/ohwada/C++_SFML-Game-Development-Book/02_Resources
+
+g++ Source/*.cpp  -std=c++11 `pkg-config --cflags --libs sfml-all`  -I./Include 
+
+
+cd /Users/ohwada/C++_SFML-Game-Development-Book
+
+
+SFML-Game-Development-Book
+https://github.com/SFML/SFML-Game-Development-Book
+
+ Game Development By Example
+https://www.amazon.co.jp/SFML-Game-Development-Example-English-ebook/dp/B01061QAH4
+
+

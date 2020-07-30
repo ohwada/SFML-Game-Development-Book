@@ -1,0 +1,159 @@
+
+cd /Users/ohwada/C++_SFML-Game-Development-Book/03_World
+
+g++ Source/*.cpp  -std=c++11 `pkg-config --cflags --libs sfml-all`  -I./Include 
+
+=====
+Chapter 3. 
+Forge of the Gods Shaping Our World 
+
+ This chapter attempts to bring knowledge around a few key topics: 
+- Entity systems in concept and practice 
+- The viewable area of our world and scrolling 
+- Tree-based scene graphs, rendering and updating of many entities 
+- Composition of all elements to shape the world
+
+
+
+======
+Entities 
+An entity denotes a game element in the world. In our game, possible entities are friendly and enemy airplanes, bullets, missiles, or pickups that increase the player's strength. Entities interact with each other: enemy airplanes can fire missiles, the player's airplane may evade them, and the missiles may explode if they hit the player's plane, dealing damage to it. 
+The player's aircraft can touch a pickup to collect it, as a result of which it gets a new ability. The possibilities are nearly unlimited, and they may occur between almost any pair of entity types.
+
+
+
+======
+Aircraft 
+Using the example of the aircraft, we need to define a concrete entity class. We derive it from Entity. Since we have different airplanes in our game, it would be nice to have a data type that can store them. An enumeration comes in handy;
+we call it Type and make it a member of the Aircraft class.   
+
+Therefore, we can now refer to it as Aircraft::Type, which is quite expressive when we see it in the code. 
+
+
+
+
+=====
+Rendering the scene 
+At one point, we have to reflect about how the game is rendered on the screen. 
+How do we draw all the entities, the scenery, and interface elements (such as a health bar)? A simple option is to have different sequential containers through which we iterate. 
+For each element, we call a possible Entity::draw() function to draw the corresponding entity on the screen. 
+We only have to make sure that objects that appear behind others (such as the scenery background) are drawn first.
+
+
+
+=====
+Scene graphs 
+In order to manage transform hierarchies in a user-friendly way, we develop a scene graph—a tree data structure consisting of multiple nodes, called scene nodes. Each scene node can store an object that is drawn on the screen, most often this is an entity. 
+Each node may have an arbitrary amount of child nodes, which adapt to the transform of their parent node when rendering. Children only store the position, rotation, and scale relative to their parent. 
+A scene graph contains a root scene node, which exists only once in a world. 
+It resides above all other scene nodes in the hierarchy, thus it has no parent node.                    
+
+
+
+==
+Scene nodes 
+We represent the nodes in the scene graph with a class called SceneNode. 
+
+Before we can implement it, we need to think about ownership semantics.
+
+
+
+======
+Scene layers 
+In the game, we often have different scene nodes that must be rendered in a certain order. Nodes with objects that are located "above" others (closer to the sky) must be drawn after them. For example, we might first draw a desert background, then an oasis and some buildings, above which we draw the planes, and eventually some health bars located in front of them. This is rather cumbersome to handle when we insert node by node to the scene graph, because we have to ensure the order manually. 
+Luckily, we can easily automate the ordering, even using the scene graph's current capabilities. We call a group of scene nodes that are rendered together a layer. 
+
+
+
+======
+Landscape rendering 
+As you can observe in the C++ sample for this chapter, 
+our aircraft travels continuously over a desert. 
+This continuity can be achieved in many ways and with many different levels of detail and complexity. 
+However, we chose to go in a very simple and yet effective way of doing it, using a feature that SFML provides out of the box. 
+
+SpriteNode
+ In order to display our background sprite through the scene graph, 
+we created a new SceneNode type, the SpriteNode, which acts as a simple sf::Sprite that can be plugged into our tree structure. Conveniently, this is all we need to make our landscape. 
+We only have to create
+
+ 
+
+======
+Landscape texture 
+In order to have a good landscape, 
+without wasting too much memory having multiple images to represent it along the whole level, 
+we used a tileable texture.
+
+
+Texture repeating 
+The key to our tiling effect is exactly the texture repeating feature that SFML provides us. 
+Every sf::Texture comes along with the option to enable repeating along both axis with the sf::Texture::setRepeated(bool) function.
+
+
+
+
+====
+Composing our world 
+Up to now, we have taken a look at entities and the scene graph, we know how to render and update objects in the world, and we have seen how views and scrolling work. We have a concrete knowledge about many building blocks, now it is time to assemble them to shape a model of our fictional world.
+
+
+
+====
+World initialization 
+In the constructor, we build up the world. The following figure can help to imagine the dimensions of our world:
+
+=====
+ Loading the textures 
+Now, let's have a look at texture loading. Thanks to our ResourceHolder class, this part could not be simpler:
+
+
+=
+Building the scene
+Now comes the interesting part: building up the scene, which is done in the World::buildScene() method. 
+First, we initialize the different scene layers. We iterate through our array of
+layer node pointers and initialize each element. 
+Finally, we attach the new node to the scene graph's root nod
+
+
+std::unique_ptr::get() returns a raw pointer to the stored object, we do not transfer ownership to the array. 
+Finally, we attach the new node to the scene graph's root node 
+as shown in the following code:
+
+
+
+
+========
+Update and draw 
+The update() and draw() methods bring the encapsulated scene graph functionality to the API of the World class. 
+
+The function to draw sets the current view and
+delegates the work to the scene graph:
+
+The update function controls world scrolling and entity movement. First, the view is scrolled according to the passed time. Next, we check if the player's aircraft reaches a certain distance (150) from the world's borders, and flip its x velocity in this case. This results in the plane moving back, until it reaches the other border, and the procedure repeats. Eventually, we forward the update to the scene graph, which actually applies the velocities.
+
+ 
+
+Integrating the Game class 
+By now we already know how the Game class works, what a game loop is for, and how to take advantage of it. For this chapter, we take the previously used Game class, and plug into it our newcomer World class.
+
+Because we obeyed a few principles, this integration is very easy and it's just a matter of having a World object inside the Game class, and then letting it update and draw itself in the appropriate times.
+
+
+
+Summary 
+This chapter has moved away from the typical minimal examples, and has given you deeper insights to a possible game architecture. As always, keep in mind that we have chosen one of many design options—not every game needs a scene graph, sometimes a list of entities is enough.
+
+
+
+
+cd /Users/ohwada/C++_SFML-Game-Development-Book
+
+
+SFML-Game-Development-Book
+https://github.com/SFML/SFML-Game-Development-Book
+
+ Game Development By Example
+https://www.amazon.co.jp/SFML-Game-Development-Example-English-ebook/dp/B01061QAH4
+
+

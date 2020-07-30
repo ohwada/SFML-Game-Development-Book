@@ -1,0 +1,30 @@
+
+cd /Users/ohwada/C++_SFML-Game-Development-Book/01_Intro
+
+g++ Source/*.cpp  -std=c++11 `pkg-config --cflags --libs sfml-all`  -I./Include 
+
+======
+Introducing SFML 
+Before we start developing a game, we would like to tell you a little bit about the library we will use throughout the book. SFML is an object-oriented C++ framework.
+
+ A minimal example 
+Before you go deeper into the book and SFML itself, let's take a look at a minimal application example to show how an application that uses this library looks like, its general flow of execution, and some basic functionality.
+
+Developing the first game Now that we got the boring parts finished, we can finally start making a game. So where do we start? What do we do first? First, you should have an idea of what kind of game you want to develop, and what elements it will incorporate. For the purpose of this book, we have chosen to create a shoot-em-up game. The player controls an aircraft viewed from the top, and has to find its way through a level full of enemies.
+
+Displaying sprites on the screen 
+Now let's get something interesting on the screen. Instead of just rendering a boring single color circle to the screen, let's actually render an image. To do this, SFML provides a couple of tools to make your life easy. First we have the sf::Texture class that holds the actual image data loaded from the hard drive. Next is the sf::Sprite class that represents an instance with position and orientation in the scene. The texture describes the image, while the sprite describes where and how to put one on the screen.
+
+
+====
+
+cd /Users/ohwada/C++_SFML-Game-Development-Book
+
+
+SFML-Game-Development-Book
+https://github.com/SFML/SFML-Game-Development-Book
+
+ Game Development By Example
+https://www.amazon.co.jp/SFML-Game-Development-Example-English-ebook/dp/B01061QAH4
+
+

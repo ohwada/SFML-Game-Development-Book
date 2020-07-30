@@ -1,0 +1,454 @@
+
+cd /Users/ohwada/C++_SFML-Game-Development-Book/08_Graphics
+
+g++ Source/*.cpp  -std=c++11 `pkg-config --cflags --libs sfml-all`  -I./Include 
+
+＝＝＝＝＝＝＝＝
+Chapter 8. Every Pixel Counts – Adding Visual Effects
+
+ Throughout the previous chapters, we have constantly been adding functionality. 
+We finally reached a point where our game is playable, where all the game mechanisms are implemented. 
+With a bit of creativity, you should already be able to write your own small game. 
+Nevertheless, we are not going to quit now—a game is more than just gameplay. 
+A very important part of games are the graphics. 
+Be it cutting-edge 3D scenes in the newest real-time strategy game or the nostalgic atmosphere of a pixel-art
+indie title, graphics determine to a big extent how the player feels. 
+In this chapter, we are going to look behind the scenes of rendering. 
+We are going to cover various techniques that are used in modern games to create graphical effects of different kinds. 
+To mention a few:
+
+- Texture atlases and how different objects can be stored in one texture 
+- Texture mapping and vertex arrays 
+- Particle systems to create effects such as fire or smoke 
+- Animations that show an object in motion 
+- Render textures as an alternative to render windows 
+- Shaders to give the whole scene a distinct
+
+=======
+Defining texture atlases 
+A texture atlas describes the concept of a single texture that contains multiple objects. 
+You may also encounter other terms, such as sprite sheet, or tile set in the case of squared tiles put together. 
+Texture atlases allow having fewer image files, which decreases the amount of switches between different textures at runtime. 
+Since texture switching is a rather slow operation on the graphics card, using texture atlases may result in notable speedups. 
+Till now, we used separate textures for each object: one for each aircraft, pick-up, projectile, button, and background. 
+Every texture was stored in its own PNG file. 
+The code design looked as follows:
+
+- Textures were stored inside TextureHolder, our container storing sf::Texture objects. 
+- We had an enum Textures::ID to identify the different textures in a TextureHolder. 
+By that, we could easily refer to different textures without knowing the actual sf::Texture object or the filename. 
+- The textures used in the scene were loaded in World::loadTextures(). 
+They were bound to sprites in the specific entity classes such as Aircraft. 
+For a given entity, data tables stored the texture ID it used.
+
+
+
+The SFML sprite class sf::Sprite offers the possibility to set a texture rectangle (or texture rect for short), containing the pixel coordinates of a specific object inside the texture. 
+You already came across this functionality when we implemented the tiling background for our world in Chapter 3, Forge of the Gods – Shaping Our World. 
+The rectangle is of type sf::IntRect and stores four integral values: the x and y coordinates of the left-upper pixel (members left and top) as well as the size (members width and height).
+
+
+ResourceIdentifiers.hpp
+typedef ResourceHolder<sf::Texture, Textures::ID>	TextureHolder;
+
+======
+Adapting the game code 
+We need to extend a few parts of our code to work with texture rects instead of whole textures. 
+First, we must remove many of our resource identifiers. All the aircraft, projectile and pickup textures will be merged to one texture, with an ID of Entities. 
+The texture containing the three buttons is accessible via Buttons. 
+Eventually, we only have the following identifiers:
+
+- Entities,
+- Jungle,
+- TitleScreen,
+- Buttons,
+- Explosion,
+- Particle,
+- FinishLine,
+
+
+} In case you wonder, Jungle is the new background we will paint. 
+It is much bigger and far more interesting than the desert we had before. 
+FinishLine is a texture used to mark the end of the level, instead of the black void. 
+It is embedded to the scene graph using SpriteNode. 
+Explosion and Particle are going to be introduced soon. 
+With the new image files in our Media folder, the method World::loadTextures() can be adapted accordingly. 
+We also modify our data tables to store a texture rectangle in addition to the texture ID. 
+The rectangle coordinates are hardcoded in the initialization functions.
+
+=====
+Low-level rendering 
+Besides the high-level convenience classes sf::Sprite, sf::Text and sf::Shape, SFML provides a low-level graphics API which is more complicated to use, but allows more flexibility. 
+In the next section, we are going to look behind the scenes of rendering and discuss corresponding techniques as they are implemented in SFML.
+
+
+=======
+OpenGL and graphics cards 
+The graphics card architecture consists of many components. Notable are the graphics processing unit (GPU), which performs computations on the graphics card, and the video memory, which stores data such as textures. In contrast to their counterparts CPU and RAM, graphics cards' components are highly optimized to process 2D and 3D graphics. 
+SFML is built on top of the Open Graphics Library (OpenGL). OpenGL is, like DirectX, a specification of an interface to the graphics card. 
+Operating systems provide an API written in C that allows applications to access graphic card functionality. 
+Newer graphics cards support higher OpenGL versions and thus have the benefit of more modern features.
+
+=======
+Understanding render targets 
+A render target defines the place where 2D objects such as sprites, texts, or shapes are rendered. In SFML, this boils down to the abstract base class sf::RenderTarget. 
+Apart from clear() and draw() methods, the class provides functionality to manipulate the current view.
+
+========
+Texture mapping 
+We have worked a lot with textures in the game,
+
+http://nedrilad.com/Tutorial/topic-32/SFML-Game-Development-266.html
+
+
+We have worked a lot with textures in the game, but not explained how they are ac-tually displayed on the screen. Texel (texture element) is the term used for pixelsin texture space. The case where every texel in the texture corresponds to a pixelon the window is an exception. In general, transforms of the graphical object andthe view affect the way how pixels are displayed on the screen.Every graphical object on the screen consists of vertices. A vertex is a point thatdefines the geometry of the object. Multiple vertices are grouped to geometricprimitives such as lines, triangles, rectangles, and so on. In most cases, we haverectangular objects (such as sf::Sprite) that have four vertices, namely thefour corners of the rectangle. Polygons (modeled by sf::Shape) allow a differentnumber of vertices.Each vertex consists of target coordinates (the position of the point on the rendertarget, in world units) and texture coordinates (the position in the source texture, intexels). Texture coordinates are sometimes also called UV coordinates, becausethe variables u and v are often used instead of x and y. The process of texturemapping specifies how target coordinates are mapped onto texture coordinates,in order to know which pixels have to be drawn where. This mapping is clarified inthe following figure:
+
+======
+Vertex arrays
+All geometric primitives except points consist of more than one vertex. A vertexarray is a collection of vertices that are drawn together. A vertex array need notnecessarily represent a single geometric object; it may also store the vertices ofmany objects.In SFML, the class sf::VertexArray is used to model vertex arrays. It isa thin wrapper around std::vector<sf::Vertex> and derives fromsf::Drawable. We can add new vertices to the end of the array, and access ex-isting vertices using the index operator.The primitive type determines how the vertices are interpreted to form a geomet-ric primitive. For example, the primitive type sf::Triangles interprets three sub-sequent vertices as one triangle, the next three vertices as another triangle, and soon. sf::Quads interprets four subsequent vertices as a quadrilateral. When wework with rectangles, we will be using the sf::Quads primitive type.A small, incomplete example should give you a rough idea how vertices, vertex ar-rays and render targets interact:
+
+=====
+火や雨や煙のような視覚効果は、
+ランダムに変化する小さな粒子の集まりとして表現する
+
+Visual effects like fire, rain and smoke
+are expressed as combination of randomly changing small particles
+
+
+
+パーティクルシステムは、多くのパーティクルの動作を管理して目的の効果を形成するコンポーネントです
+
+
+
+Particle systems
+Visual effects such as fire, rain, or smoke have one thing in common: they have acontinuously changing nature and cannot be meaningfully described using a single sprite. 
+Even an animated sprite is too limited for many cases, because such effects should come with certain randomness. 
+Fire may have sparks flying in arbitrary dir-ections; smoke may be blown away by the wind.
+This is why we need another model to visualize these sorts of effects: particles. 
+A particle is a tiny object that makes up a part of the whole effect; you can imagineit as a small sprite. 
+Each particle by itself looks boring, only in combination do theylead to an emergent visual pattern such as fire.
+
+A particle system is a component that manages the behavior of many particles toform the desired effect. Emitters continuously create new particles and add themto the system. 
+
+＝＝＝＝
+Affectors 
+affect existing particles with respect to motion, fade-out,scaling, and many other properties.Given a particle texture, we could model each particle as a sprite; the particle sys-tem could contain std::vector<sf::Sprite>. The problem with this approachis that we have to draw each sprite separately. Since particle systems may easilyconsist of many thousands of particles, thousands of draw calls on the GPU are notunrealistic—per frame. Now consider that not only one effect must be rendered; de-pending on the game, the screen may contain dozens of particle systems. Clearly,we need a technique to reduce the amount of draw calls.
+
+This is where vertex arrays come into play. We model each particle as an objectwith four vertices. The vertices of all particles are inserted into a single vertex array.This gives us a method to draw everything with only one draw call.
+
+
+
+======
+Particles and particle types
+In our game, we want to create an effect for the burned propellant and the emittedsmoke of homing missiles. Both can be handled in a similar way, the main differenceis the color. Of course, it would also be possible to use different textures. The finalresult is shown in the following screenshot. You don't recognize the single particlesanymore, the trace of the missiles looks like a continuous stream.
+
+
+
+We define a class for particles that stores the position, color, and the time untilthe particle disappears. The Particle::Type data type is used to differ betweensmoke and propellant effects.
+
+
+Particle.hpp
+struct Particle
+
+=====
+Particle nodes
+To render the particles on screen, they need to be part of the scene graph. 
+We willto create a class ParticleNode, which can be inserted into the scene and whichacts as a particle system. 
+The class definition looks as follows:
+
+
+
+
+
+
+
+
+
+Many methods for drawing and updating are already known from otherSceneNode definitions, thus not listed here. getCategory() returns Cat-egory::ParticleSystem, a separate category. getParticleType() returnsthe particle type (smoke or propellant) which is stored in mType.
+A new addition is addParticle(), which looks up the data table and inserts aparticle into the system:
+
+
+
+
+In the update method, we first remove all particles of which the lifetime has expired.Since all particles have the same initial lifetime, older particles are stored at thebeginning of the container. 
+Therefore, it is enough to remove the front element ofmParticles as long as its lifetime is smaller or equal to zero (this is also thereason why we employed std::deque). 
+In the middle part of the function, we de-crease the lifetime of each particle by the current frame time. 
+Finally, every timethe particle container is modified, we enable a flag to express that the render geo-metry must be recomputed:
+
+
+
+
+
+The rendering part is shown next. 
+The mVertexArray member is declared mut-able, since it is not a part of the object's logical state. 
+This allows optimizations:we only rebuild the vertex array if something has changed, and directly beforedrawing (instead of after each update). 
+This way, if the particle system is updatedmultiple times in a row before being drawn, we do not needlessly compute the ver-tices each time.
+After checking whether we need to recompute the vertices, we set the sf::RenderStates texture to our particle texture and draw the vertex array:
+
+computeVertices()
+The rebuild of the vertex array is shown in the following code snippet. 
+First, wesave the texture's full and half sizes in variables, to determine the vertex pos-itions more easily. 
+For size, the constructor syntax is used rather than =, be-cause a sf::Vector2i (vector of integers) is converted to sf::Vector2f (vec-tor of floats). We clear the vertex array, removing all vertices in it, but keeping thememory allocated:
+
+
+For each particle, we compute the ratio between the remaining and total life-time—this ratio in [0, 1] is used to set the particle's alpha value in [0, 255]. Thealpha value determines the transparency; therefore our particles fade out continu-ously until they are completely invisible:
+FOREACH(const Particle& particle, mParticles)
+
+
+
+
+Now the interesting part: we add four vertices for each particle, one in every cornerof our rectangle. The first two arguments denote the target coordinates; the nexttwo denote the texture coordinates. The fifth argument is the vertex color. Sincewe need no gradient inside a particle, the color is uniform for all four vertices.
+addVertex(pos.x - half.x, pos.y - half.y,0.f,    0.f,    c);
+
+=====
+Emitter nodes
+Because particles should be emitted in the places where the missiles are located,it stands to reason that emitters should be attached to missiles. Once more, ourscene graph comes in very handy: we can create a new scene node Emitter-Node for emitters and attach it to the Projectile node of the missile.EmitterNode is rather simple, its class definition is shown in the following codesnippet:
+
+
+
+The pointer mParticleSystem points to the ParticleNode into which theEmitterNode emits particles. Initially, it is nullptr. 
+In the update function, weemit particles if the particle system has already been initialized. 
+Otherwise, weneed to find the system corresponding to the emitter. "Corresponding" means bothuse the same particle type, for example, Particle::Smoke. 
+We send a com-mand through the scene graph to find the right particle system. It sets the membervariable mParticleSystem to the found ParticleNode:
+
+
+
+
+emitParticles
+After the emitter has been linked to a particle system, the method to emit particlesbecomes interesting. 
+We set an emission rate and try to achieve it as closely aspossible. Since this is not usually equal to our logic frame rate, the amount of emit-ted particles per frame differs. 
+To cope with that problem, we again use accumu-lators.
+ We emit particles as long as the emission interval still fits into the current frame. 
+The remaining time is stored in mAccumulatedTime and is carried over to the next frame
+
+
+
+Why do we separate EmitterNode and ParticleNode? 
+Emitters can be con-sidered purely logical scene nodes that emit particles into particle systems. Theyare not directly related to rendering. A particle system, however, manages the up-date and rendering of particles. With our current design, we can have multiple emit-ters that emit into a single particle system. We only need one ParticleNode in-stance per effect, even with dozens of emitters. Furthermore, both scene nodescan have different transforms. An EmitterNode is attached to a missile, emittingparticles that take the missile's transform into account. As soon as particles havebeen emitted, they are managed by the ParticleNode, which uses the globalcoordinate system. It is reasonable that particles, once created, are no longer in-fluenced by the orientation of the object that created them
+
+
+========
+Affectors
+As a counterpart to emitters, we also mentioned affectors that affect particles dur-ing their lifetime. Affectors can be modeled as functions that are applied to eachparticle every frame—a meaningful abstraction might therefore be
+
+This function takes the particle to affect and the frame time as parameters. TheParticleNode would store a list of affectors and apply them to the particles dur-ing its update. 
+We have not implemented affectors in our code since we don't needtheir functionality at the moment, but you are free to extend the system howeveryou like!
+
+====
+Embedding particles in the world
+That was it for the definition of emitters and particle systems. We now add these nodes to the scene graph. 
+First the emitter in the Projectile constructor; we set its position to the tail of the missile (which is half the height away from the center)
+
+
+
+
+The particle system is attached to a layer node directly under the scene graph'sroot. 
+Because we want particles and projectiles to appear below the airplanes, wesplit the existing scene layer Air into two layers LowerAir and UpperAir. 
+In the following, you see an excerpt of World::buildScene():
+
+
+So far we have only considered the smoke effect, but the propellant fire worksin exactly the sameway. By adding the fire particle system after the smoke, it isrendered later, so the burning propellant is still visible and not covered by smoke.
+
+
+
+
+
+
+
+
+
+
+
+=====
+Animated sprites
+Alright, now we have got particles, let's accompany them with an animated explo-sion. 
+So far our aircraft have just disappeared when you shot them down. That's notsatisfying. 
+When you destroy something like an aircraft, you expect a huge explo-sion, don't you?We already had a look at texture rectangles and sprite sheets. 
+This knowledge willbe used to build our animation. An animation consists of several frames, and werepresent these frames as separate rectangles inside one larger texture, similar towhat we now do with entities. 
+Do not confuse animation frames with the game loopframes—the former represents just a state of an animation, which usually lasts formany game loop iterations
+
+
+the sprite sheet
+Explosion.png
+This is is the sprite sheet we use for the animation. 
+How does it work? 
+As timeelapses, we move the texture rect from one frame to the other, until the animationis finished.
+We do not define the animation class as a scene node but only as a drawableand a transformable object. It can then be used by whatever scene node we want,which gives a little more flexibility when and where we can use it
+
+
+We will have a look at the functions later. As you can see we use internally a sprite.We could do without a sprite if we so desired, but it defines a lot of functions thatwe want to use, making our lives easier. After that comes the frame size, this vec-tor defines the size of one frame for us. We have the values concerning frames,how many frames and what frame we are currently drawing. Lastly we have thetime for the animation, the total duration, and the elapsed time since the last framechange.So let us start looking at the actual implementation. Most of our logic is performedin the Animation::update() function, so it grows quite big. Because of that thefunction is explained in the following sections
+
+
+
+mSprite.getTextureRect();
+In the previous code, we already have the sprite sheet divided per frame and weknow how big one frame is. We have to calculate how much time needs to elapsebefore we progress to the next frame. If we are on the first frame, then our texturerect should start at the beginning of the animation sprite sheet
+
+
+while (mElapsedTime >= timePerFrame &&(mCurrentFrame <= mNumFrames || mRepeat))
+
+So while time has elapsed since we last updated, and is enough to count as a newframe, and we haven't reached the end of the animation, we perform an iteration:textureRect
+
+
+
+
+In each iteration, we move the resulting texture rect quite easily. We move it a stepto the right, all the way until we reach the end, if that occurs we move the rect downone line and start again from the start. 
+Lastly is just some book-keeping for whatframe we are on, so we know if we have reached the end of the animation.
+This is the core of the animation and covers everything we need. It's very muchpacked together in the update function, but it is all required.
+So we add it now to the aircraft such that it explodes when destroyed. Let's startwith the Aircraft constructor　
+
+
+mExplosion.setFrameSize(sf::Vector2i(256,256));
+
+
+
+We define the size of one frame of the animation,the number of frames and the duration we want it to run for. We also center theanimation sprite's origin, , so that it is easier to position.
+We will have to branch in our code to render either the normal aircraft or the explo-sion. It's not much but we still have to do it
+
+
+target.draw(mSprite, states);
+
+We cannot simply check for isDestroyed(), because we have no way of distin-guishing between airplanes that are shot down or that leave the screen. We onlywant the former to explode—hence the Boolean variable mShowExplosion.
+Also we have to remember that the animation must be updated or else it won't pro-gress. 
+The return statement prevents destroyed aircraft from further logic pro-cessing
+
+
+This would run perfectly, except that right now the aircraft would be removed beforethe explosion would even be shown. We have to make sure the entity stays aliveuntil the animation is over. We mark an aircraft for removal, as soon as it is des-troyed, and either no explosion is shown (when it leaves the screen) or the explo-sion is finished:
+
+bool Aircraft::isMarkedForRemoval()
+
+And now we finally have our properly exploding planes, which give much more im-mersion to the game.
+
+＝＝＝＝＝＝＝＝
+The Eagle has rolled!
+Aircraft::updateRollAnimation()
+It would be nice if the player's aircraft, the Eagle, turned around its roll axis (fromnose to tail) when moving sideways. If the player moves left or right, the plane'sinclination will change. Here, we don't need a full-fledged animation. It is enoughto check whether the X velocity is negative (flying left) or positive (flying right), andto set the texture rect accordingly.In the aircraft data table, we store for each plane a Boolean denoting whether itsupports a roll animation. We assume that if it does, there are two texture rect-angles located to right of the original rect, with the same size
+
+＝＝＝＝＝＝＝＝
+Post effects and shaders
+You know those big budget games with dedicated graphics programmers on them?
+One of the techniques they use is something called postrendering or posteffects.
+It's an effect that is applied after the scene has already been rendered. 
+Using thatdata, we perform whatever visual effect we want on it. One way to create effects isusing shaders, which we will delve into later.
+The first thing to cover is how to perform a post effect, how it works, and then wewill actually create an effect called bloom using shaders.
+
+＝＝＝＝＝
+Fullscreen post effects
+Well, the effect has to be applied to the whole screen, otherwise it is pretty useless.
+That is why we define a specific PostEffect class in order to make this a bit easier.
+
+
+
+This is an abstract class with some helper functions. apply() is the virtual functionwe have to define our effect code in. The isSupported() function checks ifthe graphics card supports post effects. This is only an alias forsf::Shader::isAvailable(); unless your GPU is ancient, it should be supported. 
+
+The last function is applyShader(), and it is just a simple helper used intern-ally by the derived class, so you don't have to bother with making sure you renderover the entire output.Now you might notice that the input argument to the post effect is a render texture.But up until now we have rendered everything to a render window. 
+As you mightremember, the post effect is applied on the resulting scene of the game. 
+So wehave to render the game graphics to an immediate buffer.
+So in our World class, we create a render texture that we can use as this scenebuffer:
+
+
+
+
+ Not so very different than from creating a window, simpler even. We'll have tochange our rendering code in the world, but thanks to the sf::RenderTargetinterface this is an easy task. In this code, we also apply the check to see if posteffects work on this computer:
+World::draw()
+
+
+We will get to the bloom effect later. We still have the PostEf-fect::applyShader() function left. This is where we perform the actual ren-dering, using a shader we will explain shortly:
+
+
+What we perform here is that we setup a quad using two triangles. This quadcovers the entire target output. Here you see us define an instance of the sf::RenderStates class. The purpose of this class is to convey settings to the draw()call: the shader member sets the shader we want to use, while blendMode spe-cifies the way how colors of the object and the render target are blended. Withsf::BlendNone, we choose not to blend the colors, but to override all previous pixelsin the render target.
+
+
+＝＝＝＝＝＝＝＝
+http://nedrilad.com/Tutorial/topic-32/SFML-Game-Development-290.html
+
+Shaders
+So what is this word we have mentioned, but not really explained? 
+Shaders them-selves deserve their own book in order to be explained fully
+Previously the graphics pipeline has always been fixed. 
+You put in vertices and yougot out a fixed result based on that, you could only manipulate a very limited set ofdata and operations on the vertices.
+Eventually came the programmable pipeline, for which there are a lot of details weunfortunately cannot cover. 
+A shader in this pipeline is a program that is executedon the data you provide to the pipeline: vertices, textures, and much more. 
+The key with shaders that makes them so desirable to use is that these operations areperformed on the GPU, which is highly optimized. The CPU can then be used forother computations at the same time.
+There are several different shader types, each with different purposes; however, SFML provides support for only vertex and fragment shaders. 
+Since the API usesOpenGL as its backend, it also uses OpenGL shaders so the language used forwriting the shaders is GL Shading Language (GLSL). 
+We are afraid that this topicwon't be able to cover this language, but the resources on OpenGL's own webpage www.opengl.org are very helpful for this endeavor
+
+
+
+＝＝＝＝＝
+The bloom effect
+Bloom is an effect which tries to mimic a defect in our eyes and cameras
+
+
+The effect has been a bit exaggerated in this demonstration picture, but this is whatwe are going for. 
+When really strong light enters our eyes, it bleeds out over otherparts that are not actually lit by the light. 
+This is a visual artifact that actually doesnot exist in reality.
+So how will we do this by using shaders? 
+We are achieving the bloom effect inmultiple shader passes. 
+The output of a shader program
+ can only be used as inputin the next pass, which limits the possible operations per pass. 
+Our bloom shaderwill consist of multiple steps; each step is implemented in its own GLSL program.
+Let us start by defining a source image that we have as input to our bloom effect
+
+＝＝＝＝＝＝＝＝
+http://nedrilad.com/Tutorial/topic-32/SFML-Game-Development-292.html
+
+The first shader is the brightness pass; we filter out what is bright and what is notbright in the image by a simple threshold. The resulting image is mostly black
+
+
+=====
+http://nedrilad.com/Tutorial/topic-32/SFML-Game-Development-293.html
+
+Here we can see the different bright colors that should receive the bloom effect.Mostly, it is the bullets that we have made white just for this purpose.
+
+
+=========
+http://nedrilad.com/Tutorial/topic-32/SFML-Game-Development-294.html
+
+If we simply added these colors to the scene colors, we wouldn't get the bloom ef-fect. We would just get a very bright screen. That's not enough. We have to smoothout the texture. This is done by scaling down the texture and performing a Gaussi-an blur on it. This is done twice, so we end up with a result that is a quarter size ofthe original texture
+
+
+========
+http://nedrilad.com/Tutorial/topic-32/SFML-Game-Development-295.html
+
+Now it's starting to look like something. What we do next is to add the blurred tex-tures together, and add those to the original scene that we received at the start. 
+
+========
+http://nedrilad.com/Tutorial/topic-32/SFML-Game-Development-296.html
+
+For demonstration purposes, we cranked up the effect to make it impossible to miss.Normally you would want this effect to be more subtle.
+
+======
+http://nedrilad.com/Tutorial/topic-32/SFML-Game-Development-297.html
+
+Even the fire exhaust particles on the missile get some love from the post effect.After some further tweaking, you have a game that can really stand out.So let's finally look at the code that is used to implement this effect. We are sorrythat we will not be able to cover the shaders for you. But each one of them doesone thing, so it's easy to get a grasp about what is happening in those files if youread them.We define a class called BloomEffect that inherits and implements the abstractPostEffect class. We override the virtual function apply():
+
+
+BloomEffect::apply()
+
+
+Here is the whole effect in its glory, well simplified. It goes through each step wetalked about before. The only thing out of the ordinary here is the prepareTex-tures() function. 
+This function sets up and creates the render textures we willneed internally to create the effect. Of course, this could have been moved to theconstructor, but this way the effect will always adapt to the size of the input
+
+void BloomEffect::prepareTextures(sf::Vector2usize
+
+=======
+http://nedrilad.com/Tutorial/topic-32/SFML-Game-Development-298.html
+
+We have different texture sizes because the down sample process is the scalingdown of the texture. So the texture itself has to be smaller as well. The rest of thefunctions perform the steps we explained before.Here, you see the sf::Shader class in action. A reference to it is retrievedfrom a resource holder dedicated to shaders. The methodsf::Shader::setParameter() passes values from C++ to the GLSL program.In the shader, you can access these values. applyShader() eventually performsthe rendering and display() updates the render target
+
+ BloomEffect::filterBright()
+
+======
+http://nedrilad.com/Tutorial/topic-32/SFML-Game-Development-300.html
+
+If you find shaders interesting we recommend you read up on them. There is a lotof good information available on the subject, and it's a great tool to have to hand.Also definitely have a look at the shaders we have written
+
+=====
+http://nedrilad.com/Tutorial/topic-32/SFML-Game-Development-301.html
+
+Here's an example of a good and popular tutorial on GLSL:
+http://www.lighthouse3d.com/tutorials/glsl-tutorial
+
+======
+

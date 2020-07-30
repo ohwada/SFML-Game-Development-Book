@@ -1,0 +1,303 @@
+
+cd /Users/ohwada/C++_SFML-Game-Development-Book/09_Audio
+
+g++ Source/*.cpp  -std=c++11 `pkg-config --cflags --libs sfml-all`  -I./Include 
+
+=====
+http://nedrilad.com/Tutorial/topic-32/SFML-Game-Development-303.html
+
+
+Chapter 9. Cranking Up the Bass -Music and Sound EffectsSince the beginning of video games, sound has been a central media in games.
+
+Many games can be recognized only by listening to them. In the last few years,game industries have chosen to neglect audio in favor of better graphics; yet audiotakes a very important part in a wide range of games. Independent studios in par-ticular often put a huge effort in making games unique in their art style, which in-cludes audio, graphics, and story. If used appropriately, music themes and soundscan have a tremendous impact on the atmosphere conveyed by a game.
+
+In this chapter, we are going to cover the technical background of embedding audiointo a game, taking the opportunity to have a closer look at SFML's Audio module.We are going to do the following:
+
+- Play different music themes in the background• 
+- Play sound effects that correspond to game events such as explosions
+- Position sound effects in the 2D world to convey a feeling of spatialsound
+
+=======
+Music themes
+First, we want to play background music depending on the state we are currently in.
+We have prepared two themes: 
+One for the menu, and one for the game itself. 
+Well define a corresponding enum:
+
+{
+MenuTheme,
+MissionTheme,
+};
+========
+
+We'll then create a class that has an interface dedicated to music playing:
+
+class MusicPlayer
+
+
+The method names should be self-explanatory. 
+We have a single sf::Musicinstance that represents the currently-played music. 
+The mFilenames variablemaps music IDs to filenames and is initialized in the constructor. 
+The volume takesa value between 0 and 100; we'll initialize it to full volume. 
+As SFML does notsupport the MP3 format, we'll use OGG for our files. 
+If you are wondering howto convert between different formats, one possibility is the Audacity software (ht-tp://audacity.sourceforge.net).
+
+========
+Loading and playing
+SFML uses the sf::Music class to deal with music themes. 
+As already men-tioned in Chapter 2, Keeping Track of Your Textures - Resource Management,this class behaves differently from other resource classes. 
+Since music themes areusually long and may require a lot of memory, they are not loaded at once intoRAM. Instead, sf::Music streams them from the source media, usually the harddisk. 
+This means that only a short chunk is kept in memory at one time, with new ones loaded as the theme progresses. 
+As a result, the source media must be avail-able for as long as the music is played. 
+For files, this means that you should notunplug an external storage device with the music on it. 
+You can also load resourcesfrom different sources such as the RAM; 
+in the case of music, you are responsiblefor their constant availability
+
+
+
+In the MusicPlayer::play() method, the path of the desired music is lookedup in the map. 
+The theme is loaded and possible loading errors are checked. The streaming nature is also the reason why the method of sf::Music to open atheme from the hard disk is named openFromFile() and not loadFromFile()
+
+
+At the end, you can see some new statements. The setVolume() method setsthe music's volume to a value in the range [0, 100], with 0 being mute and 100being the maximum volume. 
+The setLoop() method specifies whether the themeis played again as soon as its end is reached; background themes are usuallylooped. 
+The play() method eventually starts the music. 
+Since music and soundeffects use their own threads in SFML, you don't have to update them continuously.However, you have to keep the sf::Music object alive as long as the music isbeing played.
+
+
+Music themes can be stopped or paused; for this purpose, sf::Music providesthe stop() and pause() methods. 
+If a theme is paused, you can resume it fromthe time where it was paused. 
+A stopped music, in contrast, is replayed from thebeginning. If we call openFromFile(), the music will automatically be stopped.
+The getStatus() method can be used to check which state the music is in. 
+It re-turns one of the three enumerators in the sf::Music scope: Playing, Paused, or Stopped.
+
+=======
+Use case - In-game themes
+
+We have seen that using music themes with SFML is very simple. 
+We are nowgoing to invoke the MusicPlayer routines in the different states of our game
+
+
+First, the Application class gets a MusicPlayer instance and the State::Context class gets a new pointer, named music, to the music player.
+In the menu state's constructor, we play the menu theme:
+
+We proceed analogously towards the game state, where we play the mission theme:
+
+
+
+If the application switches to one of these two states, the MusicPlayer::play()function will be called. 
+This stops the current theme and results in a new theme being played.
+When the user pauses the game, we would like the music to be paused aswell. 
+This can be handled in the PauseState constructor. 
+We also define thePauseState destructor which resumes the music. As soon as the pause state isover, the music shall no longer pause.
+
+
+
+At this point, playing different music themes in our game is completely operational.
+There are many ways to extend the current functionality: Playlists that play a se-quence of themes in order; or smooth theme transitions implemented by continu-ous adaption of the music volume. Some modern games play different channels ofa theme depending on the situation: 
+In a passage where you have to pay attention,the music builds up tension; during an action scenario, the bass kicks in.
+
+
+======
+http://nedrilad.com/Tutorial/topic-32/SFML-Game-Development-309.html
+
+Sound effects
+We have many gameplay events that can be represented by sounds: Fired machineguns, launched missiles, explosions, collection of pickups, and so on. Unlike music,sound effects are mostly very short. 
+As a consequence, they can be loaded com-pletely into memory, and we can also use the raw WAV format for these files withoutwasting too much memory. 
+We are going to use the sf::SoundBuffer resourceclass to store the audio samples for our sound effects.
+The following enumeration of sound effects is used in our game. We'll also create atypedef for the resource holder of sf::SoundBuffer.
+
+
+We implement a class for the sound effects, one similar to the MusicPlayer class
+
+The class contains a resource holder for the sound buffers and a list of currentlyactive sound effects. Since more than one sound effect may be active at the sametime, we need a container.
+
+======
+http://nedrilad.com/Tutorial/topic-32/SFML-Game-Development-310.html
+
+
+Loading, inserting, and playing
+In the constructor, we load all of the sound effects. We do this by calling theSoundBufferHolder::load() function, in a similar fashion to the textures andfonts we loaded in earlier chapters. 
+The first argument we pass is a SoundEf-fect::ID enumerator, the second is the filename:
+
+
+=====
+http://nedrilad.com/Tutorial/topic-32/SFML-Game-Development-311.html
+
+How do we play a sound? 
+First, we have to look up the correct sound buffer bycalling SoundBufferHolder::get(). 
+We add a new sf::Sound instance thatuses this sound buffer to the list of sounds. 
+Then, we obtain a reference to thesound and call sf::Sound::play() to play the sound
+
+
+
+
+
+Instead of the sf::Sound constructor, you can also use the setBuffer() method to initialize the sound buffer.
+You might wonder why we took the std::list STL container. 
+The problem withstd::vector is that it may relocate existing sounds as we add new ones, thusinvalidating them mid-play. Also, we cannot efficiently remove random elementsfrom a std::vector container without changing the element order. 
+It is also important that we first insert the sound and then play it. Otherwise, a copy would beinserted, and the local sound object would stop playing as soon as it left scope
+
+
+====
+http://nedrilad.com/Tutorial/topic-32/SFML-Game-Development-311.html
+
+Removing sounds
+As soon as a sound effect has finished playing, there is no point of keeping it in thelist any longer. 
+We therefore provide a removeStoppedSounds() method whichremoves all sounds that have stopped. 
+As soon as sf::Sound finishes playing,it automatically switches to the Stopped state. 
+The method is written in a simpleway, thanks to the std::list::remove_if() method and lambda expressions
+
+======
+http://nedrilad.com/Tutorial/topic-32/SFML-Game-Development-312.html
+
+Use case - GUI sounds
+Our SoundPlayer object is instantiated as a member of the Application class,similar to MusicPlayer. 
+It is also added to the State::Context structure
+
+If a button is clicked, we would like to play an appropriate sound effect. 
+We'll add amember SoundPlayer& mSounds to the Button class. We'll then adapt its con-structor to take an entire Context object and initialize the reference to the soundplayer:
+
+In the Button::activate() method, which is called when a button is clicked,we'll play the corresponding sound:
+
+
+
+context.music->play(Music::MenuTheme)
+
+Several Button objects are instantiated in their corresponding state classes. 
+As a short reminder, here is an excerpt of the constructor of such a state class. Thecontext is passed to the buttons, which extracts the sound player from it. 
+Additionally, the music theme is played in that constructor:
+
+
+Now youll hear a sound every time you activate a button
+
+======
+http://nedrilad.com/Tutorial/topic-32/SFML-Game-Development-314.html
+
+Sounds in 3D space
+The most interesting part about sound effects is yet to come. 
+An immersive atmo-sphere only builds up if sounds are properly located within the game world. 
+Likegraphical objects, sounds can have a position.
+The coordinate system for sounds is three-dimensional. SFML's sound API workswith the sf::Vector3f type, a 3D vector with the members x, y, and z. SFML in-ternally uses Open Audio Library (OpenAL), an interface for low-level audio func-tionality, which is also the origin of the sound spatialization concepts we are going todiscuss here. Spatializing sounds means nothing more than to locate them in the3D space, that is, to give them a spatial representation
+
+
+The listener
+The audition of spatial sound effects depends on the listener. 
+A useful analogy is tocompare the listener with your head. 
+The listener's location and orientation can bedescribed with the following three 3D vectors:• Position: 
+This vector describes where the listener is located in 3Dspace.• Up: This vector tells where the top of the head points to. In SFML 2.0,the up vector is hardcoded to (0, 1, 0), thus "up" lies always in the+Y direction.• Direction: This vector expresses where the listener is "looking". It is arelative vector, not a position in space. SFML uses a default direction of(0, 0, -1), meaning that the listener is headed towards the negat-ive Z axis. It must be linearly independent from the up vector, so don'tchoose a direction with both X and Z axes set to zero. The direction vec-tor need not have a unit length
+
+
+The orientation of the listener determines how sounds are perceived. If a sound isplayed on the right-hand side of the listener, the user will hear it in its right head-phone. If you have a surround system, you will also be able to differentiate betweenfront and rear sounds.
+SFML provides the sf::Listener class which has the setPosition() andsetDirection() methods to set the corresponding attributes. Thesf::Listener class contains only static methods, it is not intended to be instan-tiated.
+
+
+========
+Attenuation factor and minimum distance
+
+Close sounds are perceived louder than distant ones. 
+The sound's volume is in-versely proportional to its distance from the listener (we have a 1/distance relation-ship, also known as the inverse distance model)
+
+
+The attenuation factor determines how fast a sound is attenuated depending onthe distance. The higher the factor, the weaker the sound becomes for a given dis-tance or the closer the sound has to get to be played at a given volume.
+The minimum distance is the distance between the listener and the sound at which100 percent volume is achieved. If the sound comes closer, the volume will not in-crease anymore. If the sound goes further away, it will be attenuated.
+The following figure should give you a better understanding of the perceived soundvolume depending on its distance to the listener. There are two cases: Distancessmaller than the minimum distance yield a constant volume of 100%, bigger dis-tances lead to attenuated sounds depending on the attenuation factor
+
+
+
+Attenuation factor and minimum distance are specific to each sound. SFMLprovides the setAttenuation() and setMinDistance() methods in thesf::Sound class. For sound spatialization, the setPosition() method is re-quired to position a sound in space
+
+
+======
+Positioning the listener
+
+Our sounds are located in the plane of the monitor, thus their Z coordinate is al-ways 0. But how do we place the listener? It is tempting to set the listener's Z co-ordinate to 0, just like the sounds. This is wrong. 
+When you do this, a sound mov-ing from left to right will pass directly through the listener. As a result, you first hearthe sound only in the left ear, and only afterwards in the right ear. Even if the soundis very close, you will not hear it in both ears
+
+
+To get around this issue, we place the listener in a plane different than thesound—just like your head is in front of the monitor, and not inside it. The listener'sZ coordinate therefore has a value greater than zero.
+Let's say the 2D minimum distance is the number of world units between the listen-er's place in the 2D world and the sound. Since the listener itself resides outsidethe 2D world plane, the effective 3D minimum distance has to be computed withthe Pythagorean theorem, as shown in the following figure
+
+＝＝＝＝＝＝
+http://nedrilad.com/Tutorial/topic-32/SFML-Game-Development-317.html
+Playing spatial sounds
+An important fact to keep in mind: To enable audio spatialization, the sound effectsmust have a single channel (mono). 
+Stereo sounds are played at full volume, re-gardless of their position in space.
+In SoundPlayer.cpp, we create an anonymous namespace for a few constantsrepresenting the measures discussed before. 
+Don't hesitate to experiment withthese values
+
+
+
+
+
+
+Now we need to connect the 3D audio coordinate system with our 2D graphics co-ordinate system. Both coordinate systems are completely unrelated; how to mapone onto another depends on the use case. In the previous figure, you see howthe axes of both coordinate systems are aligned.
+We implement the remaining functions of the sound player, beginning with thelistener's position. The X coordinate is the same in both graphics and audio sys-tem. The Y coordinate needs to be negated, as the audio up vector is in the +Ydirection, but on the screen, the Y axis points downwards. For the Z coordinate,we take the constant distance between the listener and the screen plane:
+
+
+
+Next, we define the second overload of the play() function, which takes a 2Dgraphics position. To compute the 3D audio position, we again need to negate Y,but here we use Z=0. We also set the attenuation and minimum distance for thesound. Finally, the sound is played:
+
+
+
+
+Now, we must make sure that non-spatialized sounds (such as a button click) arestill played correctly. If we move the listener, all sounds will be affected, which isnot always what we want. In our first play() overload, we make sure the soundis played directly in front of the listener, so it will have maximum volume. ThegetListenerPosition() function transforms the 3D listener position back to2D graphics coordinates:
+
+
+
+
+======
+http://nedrilad.com/Tutorial/topic-32/SFML-Game-Development-319.html
+
+Use case - In-game sound effects
+That was a lot of theory; let's get back to the interesting stuff. We want to embedsound effects in our game and play them whenever appropriate. 
+Before we can dothat, we need access to the sound player; we let GameState pass a SoundPlay-er reference to our World class.Inside the world, we would like to have a dedicated scene node for sounds, so thatwe can use our command system to play sounds. We'll add a SoundNode class,which is a simple adapter to the SoundPlayer class
+
+
+
+
+
+The function definitions are not particularly interesting. The getCategory()method returns a new SoundEffect category, while playSound() forwards itsarguments to the mSounds sound player. The sound node is inserted into thescene graph in World::buildScene().
+Anyway, this allows us to define a playLocalSound() method for entities, whichsends a command to the sound node. As all of our current sound effects are re-lated to airplanes, we define playLocalSound() in the Aircraft class; but itwould also be possible to have it in the Entity or SceneNode base classes
+
+
+
+
+
+
+command.action =derivedAction<SoundNode>(std::bind(&SoundNode::playSound,_1,effect, getWorldPosition()));
+
+
+The std::bind() call might look more confusing than it actually is. It convertsthe SoundNode::playSound() function to a functor, using the following para-meters:
+
+-  _1: This is the first parameter of Command::action (namelySceneNode&), which is interpreted as the this pointer ofSoundNode::playSound()
+- effect: This is the sound effect ID
+- getWorldPosition(): This is the position where the sound is playedNow we've written this method once, so we don't have to fiddle with commandsevery time we want to play a sound. Next, we implement the sound effects forlaunching a missile and firing the machine gun. In the case of the machine gun, wecreate different sound effects for the player and enemies. In total, we only have toadd two playLocalSound() calls:
+
+
+
+For the explosions, the approach is very similar. 
+In order to add variety, we randomly choose one of two possible sound effects. 
+For the pickup collection, which is performed in World::handleCollisions(), we proceed in a slightly different manner. 
+Since we are in the World class and not a scene node, we invoke playLocalSound() on the player's aircraft:
+
+
+
+Because we are in the World class, we could directly call SoundPlayer::play(); however, we still use SoundNode for symmetry reasons. 
+If the implementation of Aircraft::playLocalSound() or SoundNode::playSound() changes, the modifications will still be applied to allspatial sound effects
+
+
+
+
+The last thing we need to do is to update the listener and remove the sounds thathave finished playing. We'll set the listener to the player's aircraft position, so thatthe player shares the audial position of its pilot. We'll add a function which is in-voked in World::update():
+=====
+
+======
+#### reference
+SFML-Game-Development-Book
+https://github.com/SFML/SFML-Game-Development-Book
+
+ Game Development By Example
+https://www.amazon.co.jp/SFML-Game-Development-Example-English-ebook/dp/B01061QAH4
+
+

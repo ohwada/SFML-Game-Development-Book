@@ -1,0 +1,300 @@
+
+cd /Users/ohwada/C++_SFML-Game-Development-Book/07_Gameplay
+
+g++ Source/*.cpp  -std=c++11 `pkg-config --cflags --libs sfml-all`  -I./Include 
+
+
+
+
+======
+Chapter 7. Warfare Unleashed – Implementing Gameplay
+
+In Chapter 5, Diverting the Game Flow – State Stack and Chapter 6, Waiting and Maintenance Area – Menus, 
+
+you have seen how to handle menus and states, now it is time to return to the actual game. Up till now, we have built a world that can contain various entities, and implemented the basic interaction mechanisms through updates, drawing, and commands. However, this is not particularly interesting as long as the world is empty.
+
+In this chapter, we are going to populate the world, and implement the core part of the game; the actual gameplay with enemies, weapons, battles, and goodies. 
+We are going to cover the following topics: 
+- Enemy aircraft controlled by a simple artificial intelligence 
+- Projectiles such as a machine gun or missiles 
+- Pickups that improve the player's equipment 
+- Collision detection and response between entities in the scene graph 
+- The world's update cycle and automatic removal of entities
+
+
+
+
+
+
+
+To get an overview of the class hierarchy in the scene graph, here is an inheritance diagram in the scene graph
+
+
+ ========
+Equipping the entities
+You have heard about entities for the first time in Chapter 3, Forge of the Gods – Shaping Our World, where we built the World class and the scene graph. 
+
+As a quick reminder, the SceneNode base class was inherited by the Entity class. 
+Entities are the central part of this chapter. 
+It's all about the interaction between entities of different kinds. Before starting to implement all those interactions, it is reasonable to think about crucial properties our entities need to have.
+
+
+====
+Introducing hitpoints 
+Since, we are preparing our airplanes for the battlefield, we need to provide them with new specific attributes. 
+To our class definition of Entity, we add a new member variable that memorizes the current hitpoints. 
+Hitpoints (HP) are a measure for the hull integrity of an entity; the entity is destroyed as soon as the hitpoints reach or fall below zero. 
+In addition to the member variable, we provide member functions that allow the modification of the hitpoints. 
+We do not provide direct write access, however, the hitpoints can be decreased (the plane is damaged) or increased (the plane is repaired). 
+Also, a destroy() function instantly destroys the entity.
+
+======
+Storing entity attributes in data tables 
+In our game, there are already two different airplanes with different attributes. 
+For this chapter, we introduce a third one to make the game more interesting. 
+With an increasing amount of new aircraft types, attributes such as speed, hitpoints, used texture, or fire rate may vary strongly among them. 
+We need to think of a way to store those properties in a central place, allowing easy access to them. 
+What we clearly want to avoid are case differentiations in every Aircraft method, since this makes the local logic code less readable, and spreads the attributes across different functions. 
+Instead of if/else cascades or switch statements, we can store the attributes in a central table, and just access the table every time we need an attribute.
+
+=====
+Note 
+Nowadays, it is very common to load gameplay information from external resources. There are text-based formats such as YAML or XML, as well as, many application-specific text and binary formats. There are also well-known C++ libraries such as Boost.Serialize (www.boost.org) that help with loading and saving data structures from C++.
+
+=====
+Displaying text 
+We would like to add some text on the display, for example, to show the hitpoints or ammunition of different entities. 
+Since this text information is supposed to be shown next to the entity, it stands to reason to attach it to the corresponding scene node. 
+We therefore, create a TextNode class which inherits SceneNode as shown in the following code:
+
+=====
+Creating enemies 
+Enemies are other instances of the Aircraft class. 
+They appear at the top of the screen and move downwards, until they fly past the bottom of the screen. 
+Most properties are the same for the player and enemies, so we only explain the new aircraft functionality.
+
+＝＝＝＝＝
+In the method Aircraft::update(), we check for the current hitpoints, and convert them to a string, using our custom toString() function. The text node's string and relative position are set. Additionally, we set the text node's rotation to the negative aircraft rotation, which compensates the rotation in total. We do this in order to have the text always upright, independent of the aircraft's orientation.
+
+
+======
+Movement patterns 
+By default, enemies fly downwards in a straight line. 
+But it would be nice if different enemies moved differently, giving the feeling of a very basic artificial intelligence (AI). 
+Thus, we introduce specific movement patterns. 
+Such a pattern can be described as a sequence of directions to which the enemy airplane heads. 
+A direction consists of an angle and a distance.
+
+
+Let's implement a zigzag movement pattern for the Raptor plane. First, it steers for 80 units in 45 degrees direction. Then, the angle changes to -45 degrees, and the plane traverses 160 units back. Last, it moves again 80 units in +45 degrees direction, until it arrives at its original x position.
+
+ 
+
+======
+Spawning enemies 
+It would be good if enemies were initially inactive, and the world created them as soon as they come closer to the player. 
+By doing so, we do not need to process enemies that are relevant in the distant future; 
+the scene graph can concentrate on updating and drawing active enemies. 
+We create a structure nested inside the World class that represents a spawn point for an enemy.
+
+
+
+A member variable World::mEnemySpawnPoints of type std::vector<SpawnPoint> holds all future spawn points. As soon as an enemy position enters the battlefield, the corresponding enemy is created and inserted to the scene graph, and the spawn point is removed. The World class member function getBattlefieldBounds(), returns sf::FloatRect to the battlefield area, similar to getViewBounds(). The battlefield area extends the view area by a small rectangle at the top, inside which new
+
+enemies spawn before they enter the view. 
+If an enemy's y coordinate lies below the battlefield's top member, the enemy will be created at its spawn point. 
+Since enemies face downwards, they are rotated by 180 degrees.
+
+
+
+=====
+Adding projectiles 
+Finally, time to add what makes a game fun. Shooting down stuff is essential for our game. 
+The code to interact with the World class is already defined, thanks to the actions in Player and to the existing Entity base class. All that's left is to define the projectiles themselves. 
+We start with the Projectile class. 
+We have normal machine gun bullets and homing missiles represented by the same class. 
+This class inherits from the Entity class and is quite small, since it doesn't have anything special that differentiates it from other entities apart from collision tests, which we will talk about later.
+
+
+=====
+Firing bullets and missiles 
+So let's try and shoot some bullets in the game. 
+We start with adding two new actions in the Player class: 
+Fire and LaunchMissile. We define the default key bindings for these to be the Space bar and M keys.
+
+
+======
+Homing missiles 
+What would a modern aircraft be if it hadn't got an arsenal of homing missiles? 
+This is where we start to add intelligence to our missiles; 
+they should be capable of seeking enemies autonomously.
+
+====
+Note 
+Note that there are many possibilities to guide a missile. Steering behaviors define a whole field of AI; they incorporate advanced mechanisms such as evasion, interception, and group behavior. Don't hesitate to search on the internet if you're interested.
+
+
+=======
+Picking up some goodies 
+Now we have implemented enemies and projectiles. 
+But even if the player shot enemy airplanes down, and had exciting battles, he wouldn't remark that his success changes anything. 
+You want to give the player the feeling that he is progressing in the game. Usual for this game genre are power-ups that the enemies drop when they are killed. 
+So let's go ahead and implement that in our game.
+the player touches it, applies an effect to the player and disappears. Not much work with our current framework.
+
+
+
+=====
+Collision detection and response 
+Now that our world is full of entities, let's implement interactions between them. 
+Most interactions occur in the form of a collision; two airplanes collide and explode, projectiles of the player's Gatling gun perforate an enemy, and a pickup is collected by the player, and so on. 
+
+First, we write a function that computes the bounding rectangle of an entity. 
+This is the smallest possible rectangle that completely contains the entity. 
+As such, it represents an approximation of the entity's shape, which makes computations simpler. 
+Here is an example implementation: 
+
+getWorldTransform() multiplies
+the sf::Transform objects from the scene root to the leaf. sf::Transform::transformRect() transforms a rectangle, and may enlarge it if there is a rotation (since the rectangle has to remain axis-aligned). 
+sf::Sprite::getGlobalBounds() returns the sprite's bounding rectangle relative to the aircraft.
+
+
+
+
+
+Note
+ There is a wide range of more elaborated collision detection algorithms. A popular algorithm is the Separating Axis Theorem, which checks for collisions between two convex polygons. 
+You can read more about it at www.metanetsoftware.com/technique/tutorialA.html.
+
+=====
+Note 
+Note that we wrote the function for SceneNode and not Entity. 
+This is because collision occurs inside the scene graph, so we avoid the downcasts. 
+Scene nodes that do not have a physical representation have an empty bounding rectangle, which does not intersect with others.
+
+
+
+=======
+Finding the collision pairs 
+Given the collision() function, we can determine in each frame, which pairs of entities collide. 
+We store the pointers to the entities in std::pair<SceneNode*, SceneNode*>, for which we have created the SceneNode::Pair typedef. 
+All collision pairs are stored in a std::set instance. 
+Basically, we need to compare every scene node with every other scene node to determine if a collision between the two occurs. 
+To do this in a recursive way, we use two methods. 
+The first one, checkNodeCollision(), evaluates a collision between *this with its children, and the function argument node. 
+The first three lines check if a collision occurs,
+and if the nodes are not identical (we do not want an entity to collide with itself). 
+ By calling isDestroyed(), we exclude entities that have already been destroyed, and that are no longer part of the gameplay. If the four conditions are true, we insert the pair to our set. The STL algorithm std::minmax() takes two arguments and returns a pair with first being the smaller, and second being the greater of the two arguments (where smaller means lower address in this case). Thus, std::minmax(a,b) and std::minmax(b,a) return always the same pair. This comes in very handy in our case—together with the sorted set, we automatically ensure that a collision between entities A and B is inserted only once (and not twice as A-B and B-A pairs).
+
+
+
+
+
+The second part invokes the function recursively for all children of *this. Now, we have checked the whole scene graph against one node, but we want to check the whole collisions, and fill the set with collision pairs. 
+Then, we iterate through the set and differentiate between the collisions categories.
+
+
+
+
+
+=======
+Reacting to collisions 
+World::handleCollisions()
+What we have seen now is how collision detection works. 
+The other part is collision response, where collisions result in gameplay actions. 
+For every frame, we store all collided scene nodes in a set. 
+Now we can iterate through this set of SceneNode* pairs, and dispatch on the categories of each collision partner. 
+First, we write a helper function that returns true if a given pair matches two assumed categories. For example, we want to check if a pair represents a collision between the player aircraft and a dropped pickup. 
+We do not want the order of the parameters type1 and type2 to influence the result, that's why we check if the first node matches the first category and the second node the second category, as well as vice versa. 
+In the vice versa case, we swap the node
+pointers so that their order is the same as the arguments' order. Because the first parameter colliders is passed by reference, the caller will then have a consistent ordering (colliders.first matches type1 and colliders.second matches type2).
+bool matchesCategories(SceneNode::Pair& colliders,Category::Type type1, Category::Type type2)
+
+
+Our actual dispatch function is now rather simple. We check the whole scene graph for collisions, and fill the set with collision pairs. Then, we iterate through the set and differentiate between the collisions categories.
+
+
+
+
+======
+An outlook on optimizations 
+Since we test all possible scene node combinations, the number of collision checks increases quadratically (by a power of two) with the number of scene nodes. 
+This can become a performance bottleneck if we have very many entities. 
+There are several ways to cope with this issue. 
+First, needless comparisons can be reduced. Recursion can be replaced with iteration; 
+one possible solution is to write an iterator class that traverses scene graphs. 
+This would avoid checking each combination twice, and checking a scene node for collision with itself.
+
+
+======
+An interacting world 
+A lot of game logic has been implemented in the different entities, now we look at functionality that is defined in the World class. 
+You have already seen the collision in the last section.
+
+=====
+Cleaning everything up 
+During the game, entities are destroyed in battle, and have to be removed from the scene graph. We do not remove them instantly. 
+Once in a frame, we iterate through the scene graph, check which nodes have been destroyed, and detach them from their parents. To find out whether a node has been destroyed, we write the virtual function SceneNode::isDestroyed(). By default, it returns false. 
+A derived entity may specify a condition
+
+
+===
+Out of view, out of the world 
+Most entities that leave the current view become meaningless. Launched projectiles that have missed their enemy unwaveringly follow their path in the endless void. Enemies that fly past the
+
+
+====
+The final update 
+A lot of new logic code has found its way into the World class; the different functions are invoked from World::update(), which currently looks
+
+======
+Victory and defeat 
+Equipped with the Eagle aircraft, you can accept the challenge to maneuver through a mission. 
+Depending on your skill, you may reach the end of the level and become a pilot legend. 
+Or you fall victim to the enemy fleet and die in a horrible plane crash.
+
+
+
+Anyway, the player should be informed by the game about his fate. 
+In most games, there are victory and defeat conditions. 
+In our airplane game, a mission is complete if you cross the level's border at the end. 
+A mission is failed if your plane is destroyed. To display this information, we have written GameOverState that displays an appropriate message. 
+Of course, this can be extended to show high scores, statistics, or save the　game between multiple missions. 
+But the basic principle remains the same. 
+We reuse the states and GUI from the previous chapters. 
+Since their implementation should be clear, we do not paste their code here. 
+However, you are free to look at the original code base at any time.
+
+
+
+
+
+
+
+
+
+======
+Introducing SFML 
+Before we start developing a game, we would like to tell you a little bit about the library we will use throughout the book. SFML is an object-oriented C++ framework.
+
+ A minimal example 
+Before you go deeper into the book and SFML itself, let's take a look at a minimal application example to show how an application that uses this library looks like, its general flow of execution, and some basic functionality.
+
+Developing the first game Now that we got the boring parts finished, we can finally start making a game. So where do we start? What do we do first? First, you should have an idea of what kind of game you want to develop, and what elements it will incorporate. For the purpose of this book, we have chosen to create a shoot-em-up game. The player controls an aircraft viewed from the top, and has to find its way through a level full of enemies.
+
+Displaying sprites on the screen 
+Now let's get something interesting on the screen. Instead of just rendering a boring single color circle to the screen, let's actually render an image. To do this, SFML provides a couple of tools to make your life easy. First we have the sf::Texture class that holds the actual image data loaded from the hard drive. Next is the sf::Sprite class that represents an instance with position and orientation in the scene. The texture describes the image, while the sprite describes where and how to put one on the screen.
+
+
+====
+
+cd /Users/ohwada/C++_SFML-Game-Development-Book
+
+
+SFML-Game-Development-Book
+https://github.com/SFML/SFML-Game-Development-Book
+
+ Game Development By Example
+https://www.amazon.co.jp/SFML-Game-Development-Example-English-ebook/dp/B01061QAH4
+
+

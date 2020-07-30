@@ -1,0 +1,210 @@
+
+cd /Users/ohwada/C++_SFML-Game-Development-Book/05_States
+
+g++ src/*.cpp -std=c++11 -o test `pkg-config --cflags --libs sfml-all`  -I./Include 
+
+
+
+g++ Source/LoadingState.cpp  Source/State.cpp -std=c++11 `pkg-config --cflags --libs sfml-all`  -I./Include 
+
+  "_main", referenced from:
+  "ParallelTask::ParallelTask()", referenced from:
+
+
+
+
+g++ Source/LoadingState.cpp  -std=c++11 `pkg-config --cflags --libs sfml-all`  -I./Include 
+
+
+
+
+
+g++ Source/*.cpp  -std=c++11 `pkg-config --cflags --libs sfml-all`  -I./Include 
+
+
+＝＝＝＝＝＝＝＝
+Chapter 5. Diverting the Game Flow – State Stack 
+
+In the earlier chapters of this book, you have learned how to make an efficient program structure for a game, modern game loops, and data structures to contain a world with rich graphics. You also learned how to deal with user input, making it an interactive simulation. 
+With the combination of all those pieces of knowledge, we can already make an interesting game experience. 
+However, a game is usually more than that. 
+A full blown product doesn't just open and let you play without an explanation, a menu, or a title screen.
+
+
+That is what is going to be covered in this chapter, the ability to make the game richer by adding different states and screens to it. The main bits of knowledge to acquire throughout the chapter are as follows: 
+- The state and the stack 
+- Navigating between states 
+- Moving our game into a state 
+- The title screen as the entry point of the game 
+- Our old friend, the main menu 
+- Implementing an overlay pause screen 
+- A simple example of a concurrent loading state
+
+=====
+Defining a state
+ 
+While it is a bit difficult to define correctly what a state actually is, and because that also depends on the implementation we choose to go with, we will try to pass our own idea of what states are and how they should behave.
+
+We can look at a state as an independent screen in the gaming software, an object that encapsulates the logic and graphics of a determined group of functionality and information.
+
+Nothing stops us from creating a state that behaves in any way we'd like; 
+however, there are some usual guidelines into what belongs to the same state. 
+Let's try to prove this shallowly by looking at the commercial games of our time. 
+We will often see most games showing introduction videos, from the trailer of the game to company brand logos. 
+We can look at each of these screens
+
+
+
+====
+The state stack 
+One way to visualize the flow of the game screens would be to picture a finite state machine of all the screens and how they trigger each other's appearance. However, while that works and is logically accurate, we broaden the concept of the active state into a stack.
+
+ 
+Finite State Machine
+
+While this is a well known concept across the world of computation, we will shortly describe the state machine as a collection of states that ensures that only one state is active at any given time. The transition of the current state into a new one is always triggered by a condition or a timer. So, for any state of the FSM, there will be a determined set of triggers that will activate new states when appropriate.
+
+
+
+
+状態をスタックに積んで、
+状態の遷移を制御する
+
+
+Now, turning the active state into a stack essentially means that the current state is not an individual piece anymore, but rather a stacked group of pieces, when necessary. Usually, the state mechanism will only have one state active at a time, and while this is true, we effectively have a finite state machine as it is known by the computer science community. In other situations, however, such as the infamous pause screen, we will break the concept of FSM a little and have states on top of states, representing the active state all together.
+
+
+
+
+＝＝＝＝＝＝＝＝
+Adding states to StateStack 
+All states in the game have a unique identifier declared in an enum States, located in the StateIdentifiers.hpp file. 
+For example, ID States::Game refers to the GameState class.
+
+======
+Handling updates, input, and drawing 
+Until this point, we taught the concept of the stack and the states it holds. Now it is time to feed our StateStack and consequently our active State objects with events, update, and drawing orders.
+
+=====
+Input
+ Every polled event is fed to the state stack. Then, internally, the stack will deliver that event to the active states:
+
+====
+Update 
+The updating happens under the same guidelines of event handling, both the delivery order and the stopping of update propagation to lower states, if desired.
+
+====
+Draw 
+Drawing is straightforward; the StateStack class will order every active state to render itself. The first state to be drawn is the lowest and oldest on the stack, and only then come the others, in order. This grants that the states are transparent, and you will be able to see the underlying screens. Anyway, if you don't desire to see pixels from the lower states, you can use sf::RectangleShape to draw a colored rectangle over the whole screen,
+
+===
+Delayed pop/push operations 
+As you can see in the source, the StateStack class provides the pushState() and popState() functions to let us add and remove states from the active stack. 
+However, in the middle of an event or update iteration by the stack, it is not possible to alter the active state stack because it would generate a conflict when adding/removing objects to a container that is being iterated.
+
+=====
+The state context 
+In general, every screen will need to display some text or sprites, draw to the screen, among other common things. Due to this fact, and to avoid unnecessary memory wasting by loading the same texture or font to memory in multiple places, we introduced the State::Context structure. It works as a holder of shared objects between all states of our game.
+
+
+
+
+====
+Integrating the stack in the Application class 
+Since we have now more states than the game itself, we create a new class Application that controls input, logic updates, and rendering. Having a ready StateStack implementation waiting to be used, it is time to promote it into the Application class. We will plug our new state architecture into our Application class and then start using it! 
+==========================
+
+
+
+=====
+
+Navigating between states So far we have our state machine in place and running smoothly, the title screen starts up the program, but how to make the title screen call another state to its place when someone hits a key?
+
+That is exactly what the StateStack class's delayed push and pop mechanism is for. 
+
+====
+Creating the game state 
+So far we have covered the theory and practice for inserting the state stack into our sample game. It is fully functional but yet empty, so, it is finally time to create our first state, the game state. 
+For this, we create a class named GameState and we proceed to relocate the code that could be found in the Game class related to the actual aircraft gameplay to its new home:
+
+=====
+The title screen 
+Because a good place to start is always the beginning, we are about to create the title screen; that initial screen you sometimes see in games. 
+
+====
+Main menu 
+Okay, our title screen just finished, the user pressed a key and it is time to launch another screen, the famous main menu! This is probably the most common state you will find in virtually every game, it is responsible for presenting the user its options and what can be done with the game. This is usually the point where you change settings, start or continue your game, watch videos and artwork, or simply exit the game.
+
+=====
+Pausing the game
+ After having a cute menu that allows the game to start playing, we find ourselves locked again inside GameState. Indeed, we can play, but what about when we get tired of it or just want to take a break? That's when the pause screen comes into the scene!
+
+ ====
+The loading screen – sample 
+While our example game does not use a loading screen up to this point, we have decided to provide a possible implementation of such a state. You can find its source code together with the sources of this chapter, as well as guide yourself through the following paragraphs into understanding it.
+
+======
+Progress bar 
+To better understand the implementation of LoadingState which is not that different from the other screens, lets take a look at its members:
+
+We have sf::Text to display our Loading Resources string, two sf::RectangleShape objects for the progress bar background and fill, and a ParallelTask object. 
+
+
+First things first, constructing the objects happens as follows:
+
+Moreira, Artur. SFML Game Development (p.131). Packt Publishing. Kindle 版. 
+
+
+=====
+ParallelTask 
+So far we have been able to see that a ParallelTask
+object runs in the background and allows querying some information about the task's progress. To remain as simple as possible explaining the concept of a task executed in a parallel thread, we decided to implement the sample class as a dummy operation that does not do any actual loading, but rather just waits ten seconds for a timer to expire and finalize the task. 
+
+But, before explaining our implementation, let's approach a couple of concepts rapidly
+
+====
+Thread 
+A thread is essentially a function that runs in another branch of execution. You know the mandatory main() function, right? That is the entry point of every application, when it is called
+
+====
+Concurrency
+ When two threads are running in parallel, everything will go smoothly if they don't touch the same data at the same time. Anyway, it is very normal that two or more threads want to read/write to the same variables, if not for more, to communicate between them.
+
+=====
+Task implementation 
+The code for this implementation is as follows:
+class ParallelTask
+
+=====
+Summary 
+Here we conclude the fifth chapter of the book. Through its pages, we tried to pass on a lot of useful information about state managing and game flow. We talked about states and stacks of states, both in concept and in implementation. Also, we saw how to implement a handful of screens that we usually see in games, using our StateStack system to our advantage. Navigation between states was also covered and we even talked about functionality we don't use in the game, but that will certainly come handy in the future! Better to know and not need it, than to need it and not know about it!
+
+
+
+
+
+======
+Introducing SFML 
+Before we start developing a game, we would like to tell you a little bit about the library we will use throughout the book. SFML is an object-oriented C++ framework.
+
+ A minimal example 
+Before you go deeper into the book and SFML itself, let's take a look at a minimal application example to show how an application that uses this library looks like, its general flow of execution, and some basic functionality.
+
+Developing the first game Now that we got the boring parts finished, we can finally start making a game. So where do we start? What do we do first? First, you should have an idea of what kind of game you want to develop, and what elements it will incorporate. For the purpose of this book, we have chosen to create a shoot-em-up game. The player controls an aircraft viewed from the top, and has to find its way through a level full of enemies.
+
+Displaying sprites on the screen 
+Now let's get something interesting on the screen. Instead of just rendering a boring single color circle to the screen, let's actually render an image. To do this, SFML provides a couple of tools to make your life easy. First we have the sf::Texture class that holds the actual image data loaded from the hard drive. Next is the sf::Sprite class that represents an instance with position and orientation in the scene. The texture describes the image, while the sprite describes where and how to put one on the screen.
+
+
+====
+
+cd /Users/ohwada/C++_SFML-Game-Development-Book
+
+
+SFML-Game-Development-Book
+https://github.com/SFML/SFML-Game-Development-Book
+
+ Game Development By Example
+https://www.amazon.co.jp/SFML-Game-Development-Example-English-ebook/dp/B01061QAH4
+
+
