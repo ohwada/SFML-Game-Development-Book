@@ -6,7 +6,7 @@ https://www.amazon.com/dp/B00DL0CFHC
 
 <image src="https://raw.githubusercontent.com/ohwada/SFML-Game-Development-Book/master/images/bookcover.jpg" width="200" /><br/>
 
-clone from
+clone from <br/>
  https://github.com/SFML/SFML-Game-Development-Book <br/>
 
  Lets create a shoot-em-up game <br/>
