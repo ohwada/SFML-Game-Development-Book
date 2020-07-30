@@ -7,7 +7,7 @@ https://www.amazon.com/dp/B00DL0CFHC
 clone from
  https://github.com/SFML/SFML-Game-Development-Book
 
-<image src="https://raw.githubusercontent.com/ohwada/SFML-Game-Development-Book/master/images/bookcover.png" width="300" /><br/>
+<image src="https://github.com/ohwada/SFML-Game-Development-Book/blob/master/images/bookcover.jpg" width="300" /><br/>
 
 ### Reference <br/>
 - https://www.sfml-dev.org/
