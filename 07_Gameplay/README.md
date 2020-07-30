@@ -128,7 +128,7 @@ In most games, there are victory and defeat conditions.
 
 #### Screen Display
 players aircraft and enamys aircrafts fly on the desert  <br/>
-<image src="https://raw.githubusercontent.com/ohwada/SFML-Game-Development-Book/master/07_Gameplay/screenshot/screenshot_game.png.png" width="300" />
+<image src="https://raw.githubusercontent.com/ohwada/SFML-Game-Development-Book/master/07_Gameplay/screenshot/screenshot_game.png" width="300" />
 
 ### control aircraft
 - press Left Key, move left

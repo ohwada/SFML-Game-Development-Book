@@ -10,7 +10,7 @@ The player controls an aircraft viewed from the top, and has to find its way thr
 
 #### Screen Display
 draw aircraft image on black bachgroud <br/>
-<image src="https://github.com/ohwada?after=Y3Vyc29yOnYyOpK0MjAxNC0wOS0xOFQxNzo0Mjo0M1rOAW0iNQ%3D%3D&tab=repositories" width="300" /><br/>
+<image src="https://raw.githubusercontent.com/ohwada/SFML-Game-Development-Book/master/01_Intro/screenshot/screenshot_intro.png" width="300" /><br/>
 
 #### control aircraft
 - press W key, move up

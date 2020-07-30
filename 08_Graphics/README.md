@@ -58,11 +58,11 @@ The isSupported() function checks ifthe graphics card supports post effects.
 
 #### Screen Display
 fly players aircraft and enamys aircrafts on the jungle <br/>
-<image src="https://raw.githubusercontent.com/ohwada/SFML-Game-Development-Book/master/08_Graphic/screenshot/screenshot_game.png" width="300" />
+<image src="https://raw.githubusercontent.com/ohwada/SFML-Game-Development-Book/master/08_Graphics/screenshot/screenshot_game.png" width="300" />
 
 #### Visual Effects
 visual effects are displayed in the title screen as below <br/>
-<image src="https://raw.githubusercontent.com/ohwada/SFML-Game-Development-Book/master/08_Graphic/Media/Textures/TitleScreen.png" width="300" />
+<image src="https://raw.githubusercontent.com/ohwada/SFML-Game-Development-Book/master/08_Graphics/Media/Textures/TitleScreen.png" width="300" />
 
 ### control aircraft
 - press Left Key, move left

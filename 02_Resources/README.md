@@ -11,7 +11,7 @@ This chapter intends to give you a broader understanding of thefollowing points:
 
 #### Screen Display
 draw aircraft image "Eagle" over the background image "Desert"  <br/>
-<image src="https://raw.githubusercontent.com/ohwada/SFML-Game-Development-Book/master/02_Resource/screenshot/screensht_resources.png" width="300" /><br/>
+<image src="https://raw.githubusercontent.com/ohwada/SFML-Game-Development-Book/master/02_Resources/screenshot/screensht_resources.png" width="300" /><br/>
 
 ### build code
 g++ Source/*.cpp  -std=c++11 `pkg-config --cflags --libs sfml-all`  -I./Include  <br/>
